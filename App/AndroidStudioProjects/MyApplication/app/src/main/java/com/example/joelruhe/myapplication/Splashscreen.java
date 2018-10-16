@@ -10,14 +10,14 @@ import android.widget.ImageView;
 
 public class Splashscreen extends AppCompatActivity {
     AnimationDrawable plantAnimation;
-    private static int SPLASH_TIME_OUT = 3000;
+    private static int SPLASH_TIME_OUT = 4000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.splashscreen);
 
-        ImageView imageView= (ImageView)findViewById(R.id.splashscreenAnimationView);
+        ImageView imageView= (ImageView)findViewById(R.id.plantImage);
         imageView.setBackgroundResource(R.drawable.splashscreen_animation);
         plantAnimation = (AnimationDrawable) imageView.getBackground();
 
