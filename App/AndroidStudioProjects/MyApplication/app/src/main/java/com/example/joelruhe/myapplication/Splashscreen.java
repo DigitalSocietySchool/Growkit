@@ -5,26 +5,27 @@ import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
 import android.widget.ImageView;
 
-public class Splashscreen extends AppCompatActivity {
+public class SplashScreen extends AppCompatActivity {
     AnimationDrawable plantAnimation;
-    private static int SPLASH_TIME_OUT = 4000;
+    public static int SPLASH_TIME_OUT;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.splashscreen);
 
-        ImageView imageView= (ImageView)findViewById(R.id.plantImage);
+        SPLASH_TIME_OUT = 4000;
+
+        ImageView imageView= findViewById(R.id.plantImage);
         imageView.setBackgroundResource(R.drawable.splashscreen_animation);
         plantAnimation = (AnimationDrawable) imageView.getBackground();
 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                Intent homeIntent = new Intent(Splashscreen.this, MainActivity.class);
+                Intent homeIntent = new Intent(SplashScreen.this, MainActivity.class);
                 startActivity(homeIntent);
                 finish();
             }
