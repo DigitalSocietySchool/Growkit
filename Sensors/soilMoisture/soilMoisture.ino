@@ -16,7 +16,7 @@ void loop() {
 
    value= analogRead(sensor_pin);
 
-   output_value = map(value,600,850,0,100);
+   output_value = map(value,400,850,0,100);
 
    if(output_value < 0){
     output_value = 0;
