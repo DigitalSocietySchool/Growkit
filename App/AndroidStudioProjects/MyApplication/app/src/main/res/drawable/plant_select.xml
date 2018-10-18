@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/plant1"
+        android:drawable="@drawable/plant1"
+        android:duration="400"/>
+    <item
+        android:id="@+id/plant2"
+        android:drawable="@drawable/ecologism2"
+        android:duration="400"/>
+    <item
+        android:id="@+id/plant3"
+        android:drawable="@drawable/ecologism3"
+        android:duration="400"/>
+    <item
+        android:id="@+id/plant4"
+        android:drawable="@drawable/ecologism4"
+        android:duration="400"/>
+
+
+</selector>
