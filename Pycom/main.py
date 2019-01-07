@@ -4,10 +4,28 @@ import sys
 import pycom
 import time
 import ssl
-import firebase
+import urequests
+from ws2812 import WS2812
 from network import LTE
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+'''
+chain = WS2812( ledNumber=4, brightness=10, dataPin='P22' ) # dataPin is for LoPy board only
+data = [
+        (255, 102, 0)
+        (255, 102, 0)
+        (255, 102, 0)
+        (255, 102, 0)
+        ]
+chain.show( data )'''
+'''chain = WS2812(spi_bus=1, led_count=4, intensity=10)
+data = [
+    (255, 0, 0),    # red
+    (0, 255, 0),    # green
+    (0, 0, 255),    # blue
+    (85, 85, 85),   # white
+]
+chain.show(data)'''
 
 
 pycom.heartbeat(False)
@@ -16,39 +34,6 @@ red = 0xff0000
 green = 0x00ff00
 blue = 0x0000ff
 yellow = 0xffff00
-
-def connect():
-    print("Attaching to LTE network ", end='')
-    lte.attach(band=20)
-    while not lte.isattached():
-        lte.attach()
-        time.sleep(1)
-    print(' OK')
-    if not lte.isconnected():
-        print('Connecting to LTE network', end='')
-        lte.connect()
-        time.sleep(0.5)
-    print(" OK")
-
-def disconnect():
-    lte.disconnect();
-    lte.dettach();
-
-def at(s):
-    print(lte.send_at_cmd(s))
-
-def google():
-    s = socket.socket()
-    ss = ssl.wrap_socket(s)
-    i = socket.getaddrinfo('www.google.com', 443)[0][-1]
-    print('Connecting to socket...')
-    ss.connect(i)
-    print('Send...')
-    ss.send(b"GET / HTTP/1.0\r\n\r\n")
-    print(ss.recv(4096))
-    print('Close...')
-    ss.close()
-
 
 def setLED(value):
     if value >= 60:
@@ -85,7 +70,6 @@ def getDataSticks():
     setLED(valueint)
     return value
 
-NTP_SERVER = "au.pool.ntp.org"
 
 # Need to use global variables.
 # If in each function you delare a new reference, functionality is broken
@@ -155,49 +139,47 @@ def endLTE():
 
 # Sets the internal real-time clock.
 # Needs LTE for Internet access.
-def setRTC():
 
- # Ensures LTE session is connected before attempting NTP sync.
- lte = getLTE()
-
- print("Updating RTC from {} ".format(NTP_SERVER), end='')
- rtc.ntp_sync(NTP_SERVER)
- while not rtc.synced():
-     print('.', end='')
-     time.sleep(1)
- print(' OK')
-
-# Only returns an RTC object that has already been synchronised with an NTP server.
-def getRTC():
-
- if not rtc.synced():
-     setRTC()
-
- return rtc
-
-HOST = 'omega.dss.cloud'
-PORT = 12345
+host = "omega.dss.cloud"
+port = 23
 
 # Program starts here.
 try:
     print("Program starts")
-    lte = getLTE()
-        #setChilKatConf()
-    ss = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_TLSv1)
-    ss.bind((HOST, PORT))
-    for i in range(1):
-        ts = time.time()
-        request = "GET /Pins.json HTTP/1.1\r\n" \
-          "Host: " + HOST + "\r\n"                    \
-          "Connection: keep-alive\r\n"                \
-          "\r\n"
-        ss.send(request.encode())
-        result = ss.recv(4096)
-        #print (result)
-        while (len(result)>0):
-            print (result)
-            result = ss.recv(4096)
-        print ('Time '+ str(time.time()-ts))
+
+    #response = urequests.post("http://jsonplaceholder.typicode.com/posts", data = "some dummy content")
+    #print(response.text)
+    #response.close()
+
+    sensorData = {"w1": "78", "l1": "56", "t1": "23"}
+    res = urequests.post("http://omega.dss.cloud/joel/send", data = "hey")
+    res.close()
+
+    addr_info = socket.getaddrinfo(host, port)
+    print (addr_info)
+    addr = addr_info[0][-1]
+    s = socket.socket()
+    s.connect(addr)
+    s.send("Pycom here!")
+    data = s.recv(500)
+    print(str(data, 'utf8'), end='')
+    '''
+    addr_info = socket.getaddrinfo("towel.blinkenlights.nl", 23)
+    addr = addr_info[0][-1]
+    s = socket.socket()
+    s.connect(addr)
+    data = s.recv(500)
+    print(str(data, 'utf8'), end='')
+    '''
+
+    #lte = getLTE()
+    #s.bind(HOST, PORT)
+    #s.connect('0.0.0.0', PORT)
+    #addr = socket.getaddrinfo(host, port)[0][-1]
+    #s.connect(addr)
+    #s.bind(host,port)
+    #s.send('Here is the Pycom!')
+
 
  #print("Initially, the RTC is {}".format("set" if rtc.synced() else "unset"))
  #rtc = getRTC()
@@ -206,6 +188,6 @@ try:
          lte = getLTE()
          #print("RTC is {}".format(rtc.now() if rtc.synced() else "unset"))
          time.sleep(5)'''
-except Exception as e:
+except (socket.error, socket.timeout) as e:
     print("ERROR" + str(e))
 endLTE()
