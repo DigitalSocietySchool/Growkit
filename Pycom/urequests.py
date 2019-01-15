@@ -30,11 +30,13 @@ class Response:
     def json(self):
         import ujson
         return ujson.loads(self.content)
-
-
-def request(method, url, data=None, json=None, headers={}, stream=None, timeout=10):
+#https://growkit-020.firebaseio.com/
+def request(method, url, data=None, json=None, headers={}, stream=None):
     try:
         proto, dummy, host, path = url.split("/", 3)
+        #proto = 'https:'
+        #host = 'console.firebase.google.com'
+        #path = 'project/growkit-020/database/growkit-020/data'
     except ValueError:
         proto, dummy, host = url.split("/", 2)
         path = ""
@@ -49,17 +51,13 @@ def request(method, url, data=None, json=None, headers={}, stream=None, timeout=
     if ":" in host:
         host, port = host.split(":", 1)
         port = int(port)
-
     ai = usocket.getaddrinfo(host, port)
     ai = ai[0]
-
-    s = usocket.socket()
-    s.settimeout(timeout)
-    
+    s = usocket.socket(ai[0], ai[1], ai[2])
     try:
         s.connect(ai[-1])
         if proto == "https:":
-            s = ussl.wrap_socket(s, server_hostname=host, timeout=timeout)
+            s = ussl.wrap_socket(s, server_hostname=host)
         s.write(b"%s /%s HTTP/1.0\r\n" % (method, path))
         if not "Host" in headers:
             s.write(b"Host: %s\r\n" % host)
@@ -75,6 +73,7 @@ def request(method, url, data=None, json=None, headers={}, stream=None, timeout=
             data = ujson.dumps(json)
             s.write(b"Content-Type: application/json\r\n")
         if data:
+            print(data)
             s.write(b"Content-Length: %d\r\n" % len(data))
         s.write(b"\r\n")
         if data:
@@ -88,6 +87,7 @@ def request(method, url, data=None, json=None, headers={}, stream=None, timeout=
         if len(l) > 2:
             reason = l[2].rstrip()
         while True:
+            print(l)
             l = s.readline()
             if not l or l == b"\r\n":
                 break
@@ -97,10 +97,11 @@ def request(method, url, data=None, json=None, headers={}, stream=None, timeout=
                     raise ValueError("Unsupported " + l)
             elif l.startswith(b"Location:") and not 200 <= status <= 299:
                 raise NotImplementedError("Redirects not yet supported")
-    except:
+    except OSError:
         s.close()
         raise
-
+        
+    s.close()
     resp = Response(s)
     resp.status_code = status
     resp.reason = reason

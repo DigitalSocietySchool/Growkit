@@ -6,15 +6,86 @@ ini_set('error_reporting', E_ALL);
 ini_set('display_errors', 1);
 //$_SERVER['REMOTE_PORT'];
 
+$address = '192.168.137.1';
+$port = 5000;
 
-$w1 = $_GET["w1"];
+$failed = 0;
+
+try {
+    // Create a socket (AF_INET = IPV4, SOCK_STREAM=TCP stream)
+    $failed = 1;
+    $sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+
+    // Bind connection to IP/port
+    $failed = 2;
+    socket_bind($sock, $address, $port);
+
+    $failed = 3;
+    socket_listen($sock, SOMAXCONN);
+
+    while (true) {
+        // Accept connection
+        $failed = 4;
+        $client = socket_accept($sock);
+
+        $failed = 6;
+        $rec = socket_read($client, 1024);
+        echo $rec;
+      }
+} catch (Exception $e) {
+    if ($failed < 6) {
+        $causes = array('create', 'bind', 'listen', 'accept');
+        echo 'socket_' . $causes[$failed - 1] . '() failed. Reason: '
+                . socket_strerror(socket_last_error($sock)) . '\n';
+    } else {
+        echo 'Failed at ' . $failed . '\n' . $e . '\n';
+    }
+  }
+
+
+/*
+while(true) {
+//Make sure that it is a POST request.
+if(strcasecmp($_SERVER['REQUEST_METHOD'], 'POST') != 0){
+    //throw new Exception('Request method must be POST!');
+    echo'Request method must be POST!';
+}
+
+//Make sure that the content type of the POST request has been set to application/json
+$contentType = isset($_SERVER["CONTENT_TYPE"]) ? trim($_SERVER["CONTENT_TYPE"]) : '';
+if(strcasecmp($contentType, 'application/json') != 0){
+    //throw new Exception('Content type must be: application/json');
+    echo 'Content type must be: application/json';
+}
+
+//Receive the RAW post data.
+$content = trim(file_get_contents("php://input"));
+
+//Attempt to decode the incoming RAW post data from JSON.
+$decoded = json_decode($content, true);
+
+//If json_decode failed, the JSON is invalid.
+if(!is_array($decoded)){
+    //throw new Exception('Received content contained invalid JSON!');
+    echo 'Received content contained invalid JSON!';
+}
+echo 'content';
+echo 'decoded';
+
+usleep(100);
+}
+//Process the JSON.
+
+*/
+
+//$w1 = $_GET["w1"];
 //$l1 = $_GET["l1"];
 //$t1 = $_GET["t1"];
 
 //$arr = array($w1, $l1, $t1);
 // Speichern der Datei
 //$sensorData = implode(";", $arr);
-file_put_contents("text.txt", $w1);
+//file_put_contents("text.txt", $w1);
 
 
 /*$addr = '37.97.182.123';

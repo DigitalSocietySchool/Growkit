@@ -1,14 +1,49 @@
-
 import socket
 import sys
 import pycom
 import time
+from utime import sleep
 import ssl
-import urequests
-from ws2812 import WS2812
+import ufirebase as firebase
+import ws2812
 from network import LTE
+import json
+import ledConf
+from machine import CAN
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+#from ws2812rmt import WS2812RMT
+#from machine import SPI, disable_irq, enable_irq
+
+#https://github.com/JF002/lopy-snippets/tree/master/WS2812
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+def send_rmt(data, rmt):
+    no_pixel = len(data)
+    bits = bytearray(no_pixel * 24 * 2 + 2)
+    duration =  bytearray(no_pixel * 24 * 2 + 2)
+    bits[0] = 0
+    duration[0] = 255
+    bits[0] = 1
+    duration[1] = 255 # reset 51 µs
+    index = 2
+    for pixel in data:
+        for byte in pixel:
+            mask = 0x80
+            while mask:
+                bits[index] = 1
+                bits[index+1] = 0
+                if byte & mask:
+                    duration[index] = 8
+                    duration[index+1] = 4
+                else:
+                    duration[index] = 5
+                    duration[index+1] = 9
+                index += 2
+                mask >>= 1
+    rmt.pulses_send(tuple(duration), tuple(bits))
+
 '''
 chain = WS2812( ledNumber=4, brightness=10, dataPin='P22' ) # dataPin is for LoPy board only
 data = [
@@ -34,42 +69,6 @@ red = 0xff0000
 green = 0x00ff00
 blue = 0x0000ff
 yellow = 0xffff00
-
-def setLED(value):
-    if value >= 60:
-        pycom.rgbled(0xff00) #Green
-
-    elif value < 60 and value >= 20:
-        pycom.rgbled(0xffff00) #Yellow
-
-    elif value < 20:
-        pycom.rgbled(0xFF0000) #Red
-
-def getDataSticks():
-    s.bind(('0.0.0.0', 10000))
-
-    print ('Socket bind complete')
-
-    s.listen(5)                          # Now wait for client connection.
-    print ('Socket now listening')
-
-    print("Listening...")
-    c, addr = s.accept()        # Establish connection with client.
-    print ('Got connection from', addr)
-    data = c.recv(1024)
-    value = data.decode()
-    print (value)
-    valueint = int(value)
-    #if value == "stop":
-    #   break;
-    c.send('Thank you for connecting')
-    c.close()                # Close the connection
-    print('Socket connection closed!')
-    #if value != "stop":
-    #
-    setLED(valueint)
-    return value
-
 
 # Need to use global variables.
 # If in each function you delare a new reference, functionality is broken
@@ -140,54 +139,123 @@ def endLTE():
 # Sets the internal real-time clock.
 # Needs LTE for Internet access.
 
-host = "omega.dss.cloud"
-port = 23
+def pushtoDatabase(stickNumber, moistureValue, lightValue, temperatureValue):
+    stringStickNumber = str(stickNumber)
+    firebase.patch('https://growkit-020.firebaseio.com/Pins/4444/Plants/Stick'+stringStickNumber+'', {'Water': moistureValue, 'Light': lightValue, 'Temperature': temperatureValue})
+
+    '''if(stickNumber == 1):
+        firebase.patch('https://growkit-020.firebaseio.com/Pins/4444/Plants/Stick', {'Water': moistureValue, 'Light': lightValue, 'Temperature': temperatureValue})
+
+    if(stickNumber == 2):
+        firebase.put('https://growkit-020.firebaseio.com/Pins/4444/Plants/Stick2', {'Water': moistureValue, 'Light': lightValue, 'Temperature': temperatureValue})'''
+
+def setLED(moistureValue, lightValue, temperatureValue):
+    ledAmountMoisture = (moistureValue * 14) / 100 # 14 is the amount of leds for light
+    ledAmountLight = (lightValue * 11) / 100 # 11 is the amount of leds for light
+    ledAmountTemperature = (temperatureValue * 9) / 100 # 9 is the amount of leds for light
+
+    intLedAmountMoisture = int(ledAmountMoisture)
+    intLedAmountLight = int(ledAmountLight)
+    intLedAmountTemperature = int(ledAmountTemperature)
+
+    #print(intLedAmountMoisture)
+    #print(intLedAmountLight)
+    #print(intLedAmountTemperature)
+
+    #ws2812.show(ledConf.configLedYellow(intLedAmount))
+    #ws2812.show(34 * [(0,0,0)])
+    ws2812.show(ledConf.confSetLight(intLedAmountMoisture, intLedAmountLight, intLedAmountTemperature))
+    #sleep(1)
+
+def getDataSticks():
+    c = ''
+    c, addr = s.accept()
+
+    try:
+        print ('Got connection from', addr)
+        dataTest = c.readall()
+        value = dataTest.decode()
+        strValue = str(value)
+
+        stickNumber, moistureValue, lightValue, temperatureValue = strValue.split(':' , 3)
+
+        print('Stick = ' + stickNumber)
+        print('Water = ' + moistureValue)
+        print('Light = ' + lightValue)
+        print('Temperature = ' + temperatureValue)
+
+    except (Exception) as e:
+        print("ERROR1" + str(e))
+
+    print('INT VALUES:')
+    intStickNumber = int(stickNumber)
+    intMoistureValue = int(moistureValue)
+    intLightValue = int(lightValue)
+    intTemperatureValue = int(temperatureValue)
+
+    print('Socket connection closed!')
+    c.close()
+
+    print(intStickNumber)
+    print(intMoistureValue)
+    print(intLightValue)
+    print(intTemperatureValue)
+
+    '''
+    if(intStickNumber == 1):
+        healthStickOne = (intMoistureValue + intLightValue + intTemperatureValue) / 3
+        stringHealthStickOne = string(healthStickOne)
+        print('Health stick 1 = ' + stringHealthStickOne)
+
+    else:
+        healthStickTwo = (intMoistureValue + intLightValue + intTemperatureValue) / 3
+        print('Health stick 2 = ' + healthStickTwo)
+
+    intHealthStickOne = int(healthStickOne)
+    intHealthStickTwo = int(healthStickTwo)
+
+    if(intHealthStickOne <= intHealthStickTwo):
+        setLED(intMoistureValue, intLightValue, intTemperatureValue)
+    else:
+        setLED(intMoistureValue, intLightValue, intTemperatureValue)
+    '''
+
+    setLED(intMoistureValue, intLightValue, intTemperatureValue)
+    print('Set LED light')
+    print()
+
+    pushtoDatabase(intStickNumber, intMoistureValue, intLightValue, intTemperatureValue)
+
+URL = 'https://growkit-020.firebaseio.com/'
+
+s.bind(('0.0.0.0', 10000))
+print ('Socket bind complete')
+s.listen(5)                          # Now wait for client connection.
+print ('Socket now listening...')
+
+blank = 34 * [(0,0,0)]
+#rmt = RMT(channel=3, gpio="P11", tx_idle_level=0)
+ws2812 = ws2812.WS2812("P12") #P12 = GPIO28 on pycom
+
+
+#https://github.com/vishal-android-freak/firebase-micropython-esp32
+i = 0
+
 
 # Program starts here.
-try:
-    print("Program starts")
+while True:
+    try:
+        print("Program Restarts")
+        #getLTE()
+        getDataSticks()
 
-    #response = urequests.post("http://jsonplaceholder.typicode.com/posts", data = "some dummy content")
-    #print(response.text)
-    #response.close()
+        i = i + 1
+        if(i == 60):
+            ws2812.show(blank)
+            sleep(1)
+            break;
+        print(i)
 
-    sensorData = {"w1": "78", "l1": "56", "t1": "23"}
-    res = urequests.post("http://omega.dss.cloud/joel/send", data = "hey")
-    res.close()
-
-    addr_info = socket.getaddrinfo(host, port)
-    print (addr_info)
-    addr = addr_info[0][-1]
-    s = socket.socket()
-    s.connect(addr)
-    s.send("Pycom here!")
-    data = s.recv(500)
-    print(str(data, 'utf8'), end='')
-    '''
-    addr_info = socket.getaddrinfo("towel.blinkenlights.nl", 23)
-    addr = addr_info[0][-1]
-    s = socket.socket()
-    s.connect(addr)
-    data = s.recv(500)
-    print(str(data, 'utf8'), end='')
-    '''
-
-    #lte = getLTE()
-    #s.bind(HOST, PORT)
-    #s.connect('0.0.0.0', PORT)
-    #addr = socket.getaddrinfo(host, port)[0][-1]
-    #s.connect(addr)
-    #s.bind(host,port)
-    #s.send('Here is the Pycom!')
-
-
- #print("Initially, the RTC is {}".format("set" if rtc.synced() else "unset"))
- #rtc = getRTC()
-    '''while(True):
-         data = getDataSticks()
-         lte = getLTE()
-         #print("RTC is {}".format(rtc.now() if rtc.synced() else "unset"))
-         time.sleep(5)'''
-except (socket.error, socket.timeout) as e:
-    print("ERROR" + str(e))
-endLTE()
+    except (Exception) as e:
+        print("ERROR" + str(e))
+        break;

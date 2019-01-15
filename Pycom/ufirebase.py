@@ -1,16 +1,14 @@
 # adapted from firebase/EventSource-Examples/python/chat.py by Shariq Hashme
 
-from sseclient import SSEClient
-import requests
+from usseclient import SSEClient
+import urequests as requests
 
-from Queue import Queue
-import json
-import threading
-import socket
+import ujson as json
+import _thread as thread
+import usocket as socket
 
 
 class ClosableSSEClient(SSEClient):
-
     def __init__(self, *args, **kwargs):
         self.should_connect = True
         super(ClosableSSEClient, self).__init__(*args, **kwargs)
@@ -21,18 +19,18 @@ class ClosableSSEClient(SSEClient):
         else:
             raise StopIteration()
 
-    def close(self):
-        self.should_connect = False
-        self.retry = 0
-        try:
-            self.resp.raw._fp.fp._sock.shutdown(socket.SHUT_RDWR)
-            self.resp.raw._fp.fp._sock.close()
-        except AttributeError:
-            pass
+
+def close(self):
+    self.should_connect = False
+    self.retry = 0
+    try:
+        self.resp.raw._fp.fp._sock.shutdown(socket.SHUT_RDWR)
+        self.resp.raw._fp.fp._sock.close()
+    except AttributeError:
+        pass
 
 
-class RemoteThread(threading.Thread):
-
+class RemoteThread():
     def __init__(self, parent, URL, function):
         self.function = function
         self.URL = URL
@@ -44,19 +42,27 @@ class RemoteThread(threading.Thread):
             self.sse = ClosableSSEClient(self.URL)
             for msg in self.sse:
                 msg_data = json.loads(msg.data)
-                if msg_data is None:    # keep-alives
+                if msg_data is None:  # keep-alives
                     continue
                 msg_event = msg.event
                 # TODO: update parent cache here
                 self.function((msg.event, msg_data))
         except socket.error:
-            pass    # this can happen when we close the stream
+            pass  # this can happen when we close the stream
         except KeyboardInterrupt:
             self.close()
 
-    def close(self):
-        if self.sse:
-            self.sse.close()
+
+def start(self, run):
+    thread.start_new_thread(run)
+
+    def stop(self):
+        thread.exit()
+
+
+def close(self):
+    if self.sse:
+        self.sse.close()
 
 
 def firebaseURL(URL):
@@ -67,7 +73,7 @@ def firebaseURL(URL):
             if '/' == URL[-1]:
                 URL = URL[:-1]
             URL = 'https://' + \
-                URL.split('/')[0] + '.firebaseio.com/' + URL.split('/', 1)[1] + '.json'
+                  URL.split('/')[0] + '.firebaseio.com/' + URL.split('/', 1)[1] + '.json'
         else:
             URL = 'https://' + URL + '.firebaseio.com/.json'
         return URL
@@ -85,7 +91,6 @@ def firebaseURL(URL):
 
 
 class subscriber:
-
     def __init__(self, URL, function):
         self.cache = {}
         self.remote_thread = RemoteThread(self, firebaseURL(URL), function)
@@ -94,11 +99,7 @@ class subscriber:
         self.remote_thread.start()
 
     def stop(self):
-        self.remote_thread.close()
-        self.remote_thread.join()
-
-    def wait(self):
-        self.remote_thread.join()
+        self.remote_thread.stop()
 
 
 class FirebaseException(Exception):
