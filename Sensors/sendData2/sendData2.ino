@@ -33,9 +33,8 @@ String commandStop = "stop";
 int i = 0;
 
 const uint16_t port = 10000;
-const char * host = "192.168.43.28";
+const char * host = "192.168.0.105";
 String serial_data = "This is the Wemos";
-
 WiFiClient client;
 
 WiFiServer wifiServer(10000);
@@ -77,8 +76,13 @@ String moistureSensor(){
 
   mapped_moisture = map(moisture, 200, 722, 0, 100);
   mapped_light = map(light, 5000, 0, 0, 100);
-  mapped_temperature = map(temperature, 199, 256, 0, 100); //temperature - 223;
+  //mapped_temperature = map(temperature, 199, 256, 0, 100); //temperature - 223;
+  mapped_temperature = map(temperature, 210, 260, 0, 100);
 
+  if(mapped_moisture < 0){
+    mapped_moisture = 0;
+  }
+  
   if(mapped_light > 5000){
     mapped_light = 5000;
   }
@@ -129,7 +133,7 @@ void setup() {
   writeI2CRegister8bit(0x20, 6); //reset
   Serial.println();
 
-  WiFi.begin("MobielJoel", "dbkq2327");
+  WiFi.begin("DSS_2", "DSSwifi020!");
 
   Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED)
@@ -163,6 +167,7 @@ void setup() {
 void loop(){
 
 senddata(moistureSensor());
+//moistureSensor();
  //delay(5000);
  delay(100);
 }

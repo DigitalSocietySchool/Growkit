@@ -1,8 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <Wire.h>
 
-int sensor_pin = A0;
-
 int light;
 int moisture;
 int temperature;
@@ -11,34 +9,29 @@ int mapped_light;
 int mapped_moisture;
 int mapped_temperature;
 
-/*char string_mapped_light[4] = {'8','8'};
-char string_mapped_moisture[4] = {'1'};
-char string_mapped_temperature[4] = {'1','0','0'};*/
-
 char string_mapped_light[4];
 char string_mapped_moisture[4];
 char string_mapped_temperature[4];
 
 int value;
-int output_value;
-//char string_output_value[13] = string_mapped_light+':'+string_mapped_moisture+':'+string_mapped_temperature;
+//Stick should be changed when using another stick. This code is used for stick number 1. When using stick number 2, change it to "2:"
+//Same works for stick 3, 4, 5 etc..
 String Stick = "1:";
+
 
 const char* ssid     = "DSS";
 const char* password = "DSSwifi020!";
-const char* message     = "Hi from the Wemos!";
-
-String commandStop = "stop";
 
 int i = 0;
 
+//port 10000 is the port where the Pycom GPY is bound to. To send the data, it has to connect with the same port.
+//host is the IP address of the Pycom GPY
 const uint16_t port = 10000;
-const char * host = "192.168.43.28";
-String serial_data = "This is the Wemos";
+const char * host = "192.168.0.105";
 WiFiClient client;
-
 WiFiServer wifiServer(10000);
 
+//WriteI2cRegsiter8bit and readI2CRegister16bit reads and writes the value of the moisture sensore, light sensor and temperature sensor
 void writeI2CRegister8bit(int addr, int value) {
   Wire.beginTransmission(addr);
   Wire.write(value);
@@ -56,8 +49,9 @@ unsigned int readI2CRegister16bit(int addr, int reg) {
   return t;
 }
 
+
 String moistureSensor(){
-   
+  //Get and print value of moisture sensor, light sensor and temperature sensor
   Serial.print(readI2CRegister16bit(0x20, 0)); //read capacitance register
   Serial.print(", ");
   writeI2CRegister8bit(0x20, 3); //request light measurement 
@@ -70,14 +64,17 @@ String moistureSensor(){
   temperature = readI2CRegister16bit(0x20, 5);
   light = readI2CRegister16bit(0x20, 4);
 
-  //moisture 200 / 722
-  //light 65535 / 0
-  //room temperature = 250
-
+  //Map the values all values from 0 to 100 (percentages). Ex: if moisture value is 555, the mapped value of this will be around 50.
+  //Thats because 200 equals 0 and 722 equals 100. 555 is in the middle.
   mapped_moisture = map(moisture, 200, 722, 0, 100);
   mapped_light = map(light, 5000, 0, 0, 100);
-  mapped_temperature = map(temperature, 199, 256, 0, 100); //temperature - 223;
+  mapped_temperature = map(temperature, 255, 305, 0, 100);
 
+  //These if statements are used if the value will reach under 0 or above some value.
+  if(mapped_moisture < 0){
+    mapped_moisture = 0;
+  }
+  
   if(mapped_light > 5000){
     mapped_light = 5000;
   }
@@ -90,26 +87,25 @@ String moistureSensor(){
     mapped_temperature = 100; 
   }
   
-  Serial.print(mapped_moisture);
-  Serial.print(", ");
-  Serial.print(mapped_light);
-  Serial.print(", ");
-  Serial.println(mapped_temperature);
 
+  //Makes Strings of the integer values to.
   sprintf(string_mapped_moisture, "%d", mapped_moisture);
   sprintf(string_mapped_light, "%d", mapped_light);
   sprintf(string_mapped_temperature, "%d", mapped_temperature);
   
   Serial.println(Stick+string_mapped_moisture+":"+string_mapped_light+":"+string_mapped_temperature);
+  //Return this string
   return (Stick+string_mapped_moisture+":"+string_mapped_light+":"+string_mapped_temperature);
 }
 
 void senddata(String value){
 WiFiClient client = wifiServer.available();
+//If Pycom is not online
 if(!client.connect(host, port)) 
   {
     Serial.println("connection failed");
   }
+  //Else, send the data with client.print
   else{
     delay(500);
     Serial.println("Connected! Sending data..");
@@ -117,7 +113,6 @@ if(!client.connect(host, port))
     Serial.println("Disconnecting...");
     client.stop();
        }
-    //i++;
     }
   
   
@@ -128,7 +123,8 @@ void setup() {
   writeI2CRegister8bit(0x20, 6); //reset
   Serial.println();
 
-  WiFi.begin("MobielJoel", "dbkq2327");
+  //Wifi connection settins for DSS wifi
+  WiFi.begin("DSS_2", "DSSwifi020!");
 
   Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED)
@@ -144,41 +140,15 @@ void setup() {
   Serial.print("connecting to ");
   Serial.println(host);
 
-  // Use WiFiClient class to create TCP connections
-
   const int port = 10000;
   while (!client.connect(host, port)) 
   {
     Serial.println("connection failed");
     delay(5000);
   }
-  
-    //Serial.println("connected to Host");
-    //Serial.println("Sent..");
-    //client.print(serial_data);
- 
 }
 
 void loop(){
-
 senddata(moistureSensor());
- //delay(5000);
  delay(100);
 }
-
-  /*if (client) {
-    while (client.connected()) {
-      while (client.available()>0) {
-        client.print(message);
-        //Serial.write(c);
-      }
-      
-         delay(1000);
-    }
-    client.stop();]
-    Serial.println("Client disconnected");
-  }
-  else{
-    Serial.println("Could not send data");
-    delay(1000);
-  }*/
