@@ -67,7 +67,7 @@ String moistureSensor(){
   //Map the values all values from 0 to 100 (percentages). Ex: if moisture value is 555, the mapped value of this will be around 50.
   //Thats because 200 equals 0 and 722 equals 100. 555 is in the middle.
   mapped_moisture = map(moisture, 200, 722, 0, 100);
-  mapped_light = map(light, 5000, 0, 0, 100);
+  mapped_light = map(light, 10000, 0, 0, 100);
   mapped_temperature = map(temperature, 255, 305, 0, 100);
 
   //These if statements are used if the value will reach under 0 or above some value.
@@ -75,8 +75,8 @@ String moistureSensor(){
     mapped_moisture = 0;
   }
   
-  if(mapped_light > 5000){
-    mapped_light = 5000;
+  if(mapped_light > 10000){
+    mapped_light = 10000;
   }
 
   if(mapped_light < 0){
