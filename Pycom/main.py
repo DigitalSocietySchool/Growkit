@@ -90,7 +90,7 @@ def pushtoDatabase(stickNumber, moistureValue, lightValue, temperatureValue):
     #Make string of stickNumber, this has to be done to put it in the URL.
     stringStickNumber = str(stickNumber)
     #URL that will update firebase
-    firebase.patch('https://growkit-020.firebaseio.com/Pins/4444/Plants/Stick'+stringStickNumber+'', {'Water': moistureValue, 'Light': lightValue, 'Temperature': temperatureValue})
+    firebase.patch('https://'+databaseReference+'+/Pins/'+pin+'/Plants/Stick'+stringStickNumber+'', {'Water': moistureValue, 'Light': lightValue, 'Temperature': temperatureValue})
 
 def setLED(moistureValue, lightValue, temperatureValue):
     #The following calculations calculates the amount of leds that has te be turned on
@@ -150,7 +150,9 @@ def getDataSticks():
     #Call function pushtoDatabase and give all the values with it
     pushtoDatabase(intStickNumber, intMoistureValue, intLightValue, intTemperatureValue)
 
-URL = 'https://growkit-020.firebaseio.com/' #URL to database
+URL = '' #URL to database ex: https://project-020.firebaseio.com/
+databaseReference = '' #ex: project-020.firebaseio.com
+pin = '' #ex: 4444
 
 s.bind(('0.0.0.0', 10000)) #Bind to this address and port to get the data from the Sticks using a socket connection
 s.listen(5)  # Now wait for client connection.
